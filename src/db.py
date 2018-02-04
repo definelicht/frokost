@@ -6,18 +6,27 @@ from sqlalchemy_utils import database_exists
 import argparse
 
 ###############################################################################
+# API
+###############################################################################
 
-Base = declarative_base()
+
+def connect(database_path, verbose=False):
+    engine = sql.create_engine(database_path, echo=verbose)
+    Session = orm.sessionmaker(bind=engine)
+    return Session()
+
 
 ###############################################################################
 # Schema definition
 ###############################################################################
 
+Base = declarative_base()
+
 
 class Lunch(Base):
     __tablename__ = "lunch"
 
-    id = sql.Column(sql.Integer, primary_key=True)
+    id = sql.Column(sql.Integer, primary_key=True, autoincrement=True)
     date = sql.Column(sql.Date, unique=True)
     facebook_event = sql.Column(sql.Text)
 
@@ -25,10 +34,14 @@ class Lunch(Base):
 class Guest(Base):
     __tablename__ = "guest"
 
-    id = sql.Column(sql.Integer, primary_key=True)
+    id = sql.Column(sql.Integer, primary_key=True, autoincrement=True)
     first_name = sql.Column(sql.String(length=127))
     last_name = sql.Column(sql.String(length=127))
+    facebook_name = sql.Column(sql.String(length=127), unique=True)
     nationality = sql.Column(sql.String(length=127))
+
+    def __str__(self):
+        return self.first_name + " " + self.last_name
 
 
 class Attendance(Base):
@@ -47,6 +60,11 @@ Lunch.attendances = orm.relationship(
     "Attendance", order_by=Attendance.guest_id, back_populates="lunch")
 Guest.attendances = orm.relationship(
     "Attendance", order_by=Attendance.lunch_id, back_populates="guest")
+
+
+class IntegrityError(Exception):
+    pass
+
 
 ###############################################################################
 # Executable
