@@ -30,6 +30,17 @@ class Lunch(Base):
     date = sql.Column(sql.Date, unique=True)
     facebook_event = sql.Column(sql.Text)
 
+    def event_type(self):
+        if self.date.month >= 3 and self.date.month < 9:
+            return "Easter"
+        else:
+            return "Christmas"
+
+    def __str__(self):
+        return self.event_type(
+        ) + " Lunch {}" "\n  Held on: {}" "\n  Facebook event: {}".format(
+            self.date.year, self.date, self.facebook_event)
+
 
 class Guest(Base):
     __tablename__ = "guest"
