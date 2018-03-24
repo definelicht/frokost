@@ -72,8 +72,18 @@ def list_guests(session, event, year):
     lunch = get_lunch(session, event, year)
     print("Listing guests for:\n{}\nA total of {} guests attended:".format(
         lunch, len(lunch.attendances)))
-    for a in lunch.attendances:
+    for a in sorted(lunch.attendances, key=lambda a: a.guest.first_name):
         print(a.guest)
+
+
+def add_guest(session, event, year, facebook_name):
+    lunch = get_lunch(session, event, year)
+    guest = get_or_create_guest(session, facebook_name)
+    attendance = db.Attendance(guest_id=guest.id, lunch_id=lunch.id)
+    session.add(attendance)
+    session.commit()
+    print("Successfully added guest {} to {} Lunch {}.".format(
+        guest, lunch.event_type(), lunch.date.year))
 
 
 def list_guests_by_attendance(session):
@@ -152,6 +162,12 @@ if __name__ == "__main__":
         "event", type=str, choices=["easter", "christmas"])
     delete_attendances_args.add_argument("year", type=int)
 
+    add_guest_args = subparsers.add_parser("add_guest")
+    add_guest_args.add_argument(
+        "event", type=str, choices=["easter", "christmas"])
+    add_guest_args.add_argument("year", type=int)
+    add_guest_args.add_argument("facebook_name", type=str)
+
     args = vars(argParser.parse_args())
     command = args["command"]
 
@@ -169,6 +185,8 @@ if __name__ == "__main__":
         delete_attendances(session, args["event"], args["year"])
     elif command == "list_guests_by_attendance":
         list_guests_by_attendance(session)
+    elif command == "add_guest":
+        add_guest(session, args["event"], args["year"], args["facebook_name"])
     else:
         raise NotImplementedError(
             "Command \"{}\" not implemented".format(command))
