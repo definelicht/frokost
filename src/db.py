@@ -37,9 +37,7 @@ class Lunch(Base):
             return "Christmas"
 
     def __str__(self):
-        return self.event_type(
-        ) + " Lunch {}" "\n  Held on: {}" "\n  Facebook event: {}".format(
-            self.date.year, self.date, self.facebook_event)
+        return "{} Lunch {}".format(self.event_type(), self.date.year)
 
 
 class Guest(Base):
