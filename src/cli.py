@@ -76,7 +76,7 @@ def list_guests(session, event, year):
         print(a.guest)
 
 
-def add_guest(session, event, year, facebook_name):
+def add_attendance(session, event, year, facebook_name):
     lunch = get_lunch(session, event, year)
     guest = get_or_create_guest(session, facebook_name)
     attendance = db.Attendance(guest_id=guest.id, lunch_id=lunch.id)
@@ -84,6 +84,23 @@ def add_guest(session, event, year, facebook_name):
     session.commit()
     print("Successfully added guest {} to {} Lunch {}.".format(
         guest, lunch.event_type(), lunch.date.year))
+
+
+def delete_attendance(session, event, year, facebook_name):
+    lunch = get_lunch(session, event, year)
+    guest = session.query(
+        db.Guest).filter(db.Guest.facebook_name == facebook_name).one()
+    attendance = session.query(
+        db.Attendance).filter(db.Attendance.lunch_id == lunch.id,
+                              db.Attendance.guest_id == guest.id).one()
+    response = input("Really delete attendance of {} from {}? [y/N] ".format(
+        guest, lunch))
+    if response == "y":
+        session.delete(attendance)
+        session.commit()
+        print("Success.")
+    else:
+        print("Cancelled.")
 
 
 def list_guests_by_attendance(session):
@@ -94,7 +111,8 @@ def list_guests_by_attendance(session):
                 db.Attendance).join(db.Guest).group_by(
                     db.Guest.last_name).order_by(
                         "attendances DESC, first_name, last_name").all()
-    print("Listing guests by attendance in descending order:")
+    print("Listing {} guests by attendance in descending order:".format(
+        len(res)))
     for r in res:
         print("{}: {}".format(r[0], r[1]))
 
@@ -103,6 +121,8 @@ def list_lunches(session):
     print("Listing all registered lunches in chronological order...")
     for lunch in session.query(db.Lunch).order_by(db.Lunch.date).all():
         print(lunch)
+        print("  Held on: {}".format(lunch.date))
+        print("  Facebook event: {}".format(lunch.facebook_event))
 
 
 def delete_attendances(session, event, year):
@@ -157,16 +177,22 @@ if __name__ == "__main__":
     add_lunch_args.add_argument("date", type=valid_date_type)
     add_lunch_args.add_argument("facebook_event", type=str)
 
+    delete_attendance_args = subparsers.add_parser("delete_attendance")
+    delete_attendance_args.add_argument(
+        "event", type=str, choices=["easter", "christmas"])
+    delete_attendance_args.add_argument("year", type=int)
+    delete_attendance_args.add_argument("facebook_name", type=str)
+
     delete_attendances_args = subparsers.add_parser("delete_attendances")
     delete_attendances_args.add_argument(
         "event", type=str, choices=["easter", "christmas"])
     delete_attendances_args.add_argument("year", type=int)
 
-    add_guest_args = subparsers.add_parser("add_guest")
-    add_guest_args.add_argument(
+    add_attendance_args = subparsers.add_parser("add_attendance")
+    add_attendance_args.add_argument(
         "event", type=str, choices=["easter", "christmas"])
-    add_guest_args.add_argument("year", type=int)
-    add_guest_args.add_argument("facebook_name", type=str)
+    add_attendance_args.add_argument("year", type=int)
+    add_attendance_args.add_argument("facebook_name", type=str)
 
     args = vars(argParser.parse_args())
     command = args["command"]
@@ -181,12 +207,16 @@ if __name__ == "__main__":
         import_guest_list(session, args["event"], args["year"], args["path"])
     elif command == "add_lunch":
         add_lunch(session, args["date"], args["facebook_event"])
+    elif command == "delete_attendance":
+        delete_attendance(session, args["event"], args["year"],
+                          args["facebook_name"])
     elif command == "delete_attendances":
         delete_attendances(session, args["event"], args["year"])
     elif command == "list_guests_by_attendance":
         list_guests_by_attendance(session)
-    elif command == "add_guest":
-        add_guest(session, args["event"], args["year"], args["facebook_name"])
+    elif command == "add_attendance":
+        add_attendance(session, args["event"], args["year"],
+                       args["facebook_name"])
     else:
         raise NotImplementedError(
             "Command \"{}\" not implemented".format(command))
