@@ -110,7 +110,7 @@ def list_guests_by_attendance(session):
             db.Attendance.lunch_id).label("attendances")).select_from(
                 db.Attendance).join(db.Guest).group_by(
                     db.Guest.last_name).order_by(
-                        "attendances DESC, first_name, last_name").all()
+                        sql.text("attendances DESC, first_name, last_name")).all()
     print("Listing {} guests by attendance in descending order:".format(
         len(res)))
     for r in res:
